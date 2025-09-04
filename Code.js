@@ -3,8 +3,9 @@
 //
 
 // -- GLOBALS --
-var myListDocID = '1xghqLyT9m1IbnlpLRpm1qjAHvMEUoZOZ3xdclmCA-kU'; 
-const emailTemplateId = '1zQntejMEPKoa6VguBUx34t2LC9HOK4owHOyfeC2lJ0Q';
+var myListDocID = '1oZLuCFaxrcNgnd8ASTw-13tiCDm_OGhCXneNjC3X86c'; 
+
+const emailTemplateId = '1bzdo9Uxe22nyamlETnXr2wqIE702Z9nV-XGBxzDuqDg'; // For sending Allocation Emails
 
 //Spreadsheet sheet names for Get Lists...
 var myListSheetName = 'Choices';
@@ -531,7 +532,7 @@ function arrayToObjects(data, filterKey, filterValue, dateTimeZone = getDefaultT
     for (let j = 0; j < headers.length; j++) {
       const value = data[i][j];
       if (Object.prototype.toString.call(value) === "[object Date]") {
-        obj[headers[j]] = Utilities.formatDate(value, dateTimeZone, "dd-MMM-yyyy hh:mm:ss");
+        obj[headers[j]] = Utilities.formatDate(value, dateTimeZone, "dd-MMM-yyyy HH:mm:ss");
       } else {
         obj[headers[j]] = value;
       }
@@ -566,9 +567,7 @@ function myTest(){
   Logger.log(loadGInfo());
 }
 
-function refreshSpreadsheet(){
 
-}
 
 
 function sendAllocationEmails() {
@@ -588,12 +587,9 @@ function sendAllocationEmails() {
     const row = data[i];
     if (row[emailSendFlag] === 'Yes') { // Check if "Yes" is in column I
       const tripName = row[0];
-      const studentName = row[1];
-      let bodyText = doc.getBody().getText();
-      bodyText = bodyText.replace(/{TripName}/g, tripName); 
-      bodyText = bodyText.replace(/{name}/g, studentName);
+      const bodyText = doc.getBody().getText().replace('{TripName}', tripName);
       const toAddresses = [row[4], row[5]];
-      const subject = 'Y11 Trip Allocation';
+      const subject = 'Y7-8 Trip Allocation';
 
       emailsToSend.push({
         row: i + 1,
@@ -622,7 +618,7 @@ function sendAllocationEmails() {
         GmailApp.sendEmail(email.toAddresses, email.subject, email.bodyText);
         sheet.getRange(email.row, emailSentColumn, 1, 4).setValues([[
          'Sent', 
-         email.bodyText, 
+         email.body, 
          now, 
           senderEmail
         ]]);
@@ -632,7 +628,7 @@ function sendAllocationEmails() {
       
     }
     
-    //ui.alert('Sent ' + emailsToSend.length + ' emails.');
+    ui.alert('Sent ' + emailsToSend.length + ' emails.');
   }
 }
 
