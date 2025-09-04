@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <base target="_top">
+    <!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-color/dist/ectype/bootstrap-color.min.css">
+    <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">-->
+    <!--?!= include('css'); ?--> 
+    <!-- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <title>Trip Preferences</title>
+  </head>
+  <body>
+
+<div class="container" ng-app="myApp" ng-controller="myCtrl as vm">
+  <div class="jumbotron">
+    <h1><?= appTitle?></h1>
+    <small class="row">
+      <span class="col-10" id="StudentName">Logged in as <?= thisUser?></span> 
+
+    </small>
+  </div>
+  
+  <div id="bannerArea" ng-show="dataFetching"><div class="alert alert-info" >Loading...</div></div>
+  
+  <div id="myTop"  >
+    <div id="errorBanner" class="alert alert-danger" ng-show="error.status">{{error.msg}}</div>
+   
+    <div class="row">
+      <table class="table table-striped">
+        <thead >
+          <tr>
+            <td class="cl1">
+            </td> 
+          </tr>
+        </thead>
+        <tbody>
+          <!--<tr ng-repeat="s in students | filter: myFilter as filtered">-->
+          <tr ng-repeat="s in students">
+            <td class="cl1">
+              <div class="col-md-12"><h3>{{s["name"]}}</h3></div>
+            <!--</td><td class="cl2" ng-class="{'alert-warning' : s.currentchoice.choice1 != s.choice.choice1}">-->
+              <form name="tripChoiceForm" id="tripChoiceForm">
+              <div class="row">
+                <div class="col-sm-12 col-md-12 col-xl-6">
+                  <div class="col-12">
+                    <h4>1 - Location</h4>
+                    <p>Please indicate your type of trip:</p>
+                    <div class="col-12">
+                      <label>
+                        <input type="radio" ng-model="s.currentExtraData.T25HK" 
+                              ng-disabled="dataFetching || data.userType.isStudent || !s.canPost" 
+                              ng-value="1" 
+                              ng-change="checkOverseasTrip(s)">
+                        Hong Kong
+                      </label>
+                    </div>
+                    <div class="col-12">
+                      <label>
+                        <input type="radio" ng-model="s.currentExtraData.T25HK" 
+                              ng-disabled="dataFetching || data.userType.isStudent || !s.canPost" 
+                              ng-value="0" 
+                              ng-change="checkOverseasTrip(s)">
+                        Overseas
+                      </label>
+                    </div>              
+
+                  </div>
+                  <div class="col-12" id="overseasTrips-container" ng-show="s.currentExtraData.T25HK === 0">
+
+                    <h4>Overseas Trip Preference</h4>
+                    <label>Indicate which {{ maxSelections }} trips you would prefer:</label>
+                    <div class="col-12" ng-repeat="t in tripCounts | orderBy:'order'">  
+                      <input type="checkbox" 
+                          id="choice-{{t.choiceID}}"  
+                          ng-model="s.currentChoice[t.choiceID]" 
+                          ng-disabled="s.currentChoice[t.choiceID] === -1 || (s.countSelected >= maxSelections && !s.currentChoice[t.choiceID]) || dataFetching || data.userType.isStudent || s.canPost === false"  
+                          ng-change="updateSelected(s)" />
+                      <label for="choice-{{t.choiceID}}">{{ t.displayName }} </label>  <!-- Link label to the checkbox -->
+                    </div>
+                  </div>
+                </div>
+                <div class="spacer" style="height: 30px;"></div>
+                <div class="col-sm-12 col-md-12 col-xl-6">
+
+                  <div class="col-12">
+                    <h4>2 - Buddy Preference</h4>
+                    <label for="buddySelect">Choose a Buddy:</label>
+                    <select id="buddySelect" ng-model="s.currentExtraData.chosenBuddyId" ng-disabled="dataFetching || data.userType.isStudent|| !s.canPost" ng-options="buddy.buddyId as buddy.displayName for buddy in buddyList | filter:{year: s.year, buddyId: '!' + s.id}">
+                        <option value="">Select a buddy</option>
+                    </select>
+
+                  </div>
+                  <div class="spacer" style="height: 30px;"></div> <!-- Custom height -->
+                  <!--
+                    <div class="col-12">
+                    <h4>3 - Priority</h4>
+                    <p>In the event that the trips and buddy you have chosen cannot be matched, please can you indicate which is more important for you:</p>
+                    <div>
+                      <label>
+                        <input type="radio" ng-model="s.currentExtraData.tripBuddyPriority" ng-disabled="dataFetching ||data.userType.isStudent || !s.canPost" value="TRIP">
+                        TRIP - I wish to go on one of the trips I have chosen, but without my buddy.
+                      </label>
+                    </div>
+                    <div>
+                      <label>
+                        <input type="radio" ng-model="s.currentExtraData.tripBuddyPriority" ng-disabled="dataFetching ||data.userType.isStudent || !s.canPost" value="BUDDY">
+                        BUDDY - I wish to go with my buddy, but on a different trip.
+                      </label>
+                    </div>
+                  </div> 
+                  -->
+                </div>
+              </div>
+             
+              
+            
+       
+            
+            
+    <!--<p class="text-warning" ng-show="isMaxChecked()">You can only select up to 3 trips.</p>-->
+               <div class="row">
+                <div class="col-md-12 container text-center">
+                  <span class="col-12 text-info" ng-show="data.userType.isStudent">This form can be filled in by parents. Get your parents to login to fill in this form</span> 
+                    <span class="col-12" ng-show="(data.userType.isParent) && (s.canPost)">
+                        <span class="row justify-content-center"> 
+                        <button ng-click="studentPostChoices(s.row, s.id, s.currentChoice, s.currentExtraData, $index)" 
+                                title="Survey Open:{{s.student.surveyOpen}} from {{s.student.surveyStart}}" 
+                                ng-if="s.canPost && data.userType.isParent" 
+                                ng-disabled="noChangesSinceSave(s.currentChoice, s.lastSavedChoice) && noChangesSinceSave(s.currentExtraData, s.lastSavedExtraData) || dataFetching || ((s.currentExtraData.T25HK === 0) && (s.countSelected < maxSelections)) || !s.currentExtraData.chosenBuddyId" 
+                                ng-class="{'btn-light': noChangesSinceSave(s.currentChoice, s.lastSavedChoice) && noChangesSinceSave(s.currentExtraData, s.lastSavedExtraData),'btn-success': s.currentExtraData.chosenBuddyId && (((s.countSelected >= maxSelections)&&(s.currentExtraData.T25HK === 0))||(s.currentExtraData.T25HK === 1)) , 'btn-danger': ((s.currentExtraData.T25HK === 0) && (s.countSelected < maxSelections)) || !s.currentExtraData.chosenBuddyId }" 
+                                class="btn btn-lg col-10">Save choice</button>
+                        </span>
+                                 <span class="col-12 small text-info" ng-show="noChangesSinceSave(s.currentChoice, s.lastSavedChoice) && noChangesSinceSave(s.currentExtraData, s.lastSavedExtraData)">Saved!</span>
+                                  <span class="col-6 small text-warning" ng-show="((s.currentExtraData.T25HK === 0) && (s.countSelected < maxSelections))">Pick {{maxSelections}} trips.</span>
+                                  <span class="col-6 small text-warning" ng-show="!s.currentExtraData.chosenBuddyId">Complete all fields.</span>
+                    </span>
+                </div>
+                <div class="col-md-12 alert alert-info small" ng-if="(data.userType.isParent) && !(s.canPost)">Survey closed. Timing: {{s.postStartDate}} - {{s.postEndDate}}.</div>
+                
+              </div>
+              </form>
+            </td>
+            
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+
+    
+  </div>
+ 
+</div><!--container-->
+
+<?!= include("script"); ?>
+
+</body>
+</html>

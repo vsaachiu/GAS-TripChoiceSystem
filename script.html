@@ -1,0 +1,287 @@
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+ <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>-->
+<script>
+
+  /*$(function() {
+    $( ".draggable" ).draggable();
+  });*/
+
+
+//Angular
+var app = angular.module('myApp', []);
+
+
+app.controller('myCtrl', function($scope, $interval, filterFilter){
+    $scope.students = {};
+    $scope.error = {status: false, class: "bg-danger", msg: "Error"};
+    $scope.dataFetching = false;
+    $scope.data = {tripCounts : new Array()};
+    $scope.tripCounts = {};
+    $scope.refreshInterval = 30;
+    $scope.myFilter = {}
+    $scope.getFilterCount = function(){
+      return filterFilter( $scope.students, myFilter).length;
+    }
+    
+    $scope.resetFilter = function() {
+      resetFilter();
+    }
+
+    function resetFilter() {
+      const keys = Object.keys($scope.students);
+      const blankFilter = {};
+
+      if (keys.length > 0) {
+        const firstStudent = student[keys[0]];
+        for (const key in firstStudent) {
+          if (firstStudent.hasOwnProperty(key)) {
+            blankFilter[key] = ''; // Set blank value for each key
+          }
+        }
+      }
+      $scope.myFilter = blankFilter;
+    }
+    resetFilter();    
+    
+    $scope.reloadData = function(){
+      loadData();
+    }
+    
+    function loadData() {
+      $scope.dataFetching = true;
+      google.script.run.withSuccessHandler(showData).loadGInfo();
+    }
+    
+    loadData();
+
+    function showData(data){
+      $scope.data = data; 
+      //console.log($scope.data);
+      $scope.dataFetching = false;
+      $scope.error = data.error;
+      try{  
+        $scope.tripCounts = data.tripCounts;
+        $scope.students = processStudentData(data.studentInfo, data.tripCounts, data.dataFields);
+        $scope.maxSelections = data.maxSelections;
+        $scope.buddyList = data.buddyList;
+        $scope.canPost = data.canPost;
+        } catch(e) {
+          $scope.error.msg = e;
+          $scope.error.status = true;
+          console.log(e);
+        }//*/
+        $scope.$digest();
+        //console.log($scope);
+    };
+    
+  function processStudentData(students, tripCounts, dataFields) {
+    // Process each student
+    students.forEach(student => processStudent(student, tripCounts, dataFields));
+
+    return students;
+  }
+
+  function processStudent(student, tripCounts, dataFields){
+      // Initialize currentChoice and Selected
+      student.currentChoice = {};
+      student.selected = [];
+      student.countSelected = 0;
+
+      // Loop through each tripCount record and add to currentChoice.
+      tripCounts.forEach(trip => {
+        const choiceID = trip.choiceID;
+        // Check if the student has the choiceID
+        if (student[choiceID] !== undefined) {
+          // Add the trip details to currentChoice
+          if(student[choiceID] === 1) {
+            student.currentChoice[choiceID] = true;
+          } else if(student[choiceID] === -1) {
+            student.currentChoice[choiceID] = -1;
+          } else {
+            student.currentChoice[choiceID] = false;
+          }
+
+          // Add to Selected if the value is true
+          if (student[choiceID] === 1 || student[choiceID] === true) {
+            student.selected.push(choiceID);
+            student.countSelected++;
+          }
+        }
+        
+      });
+
+      student.currentExtraData = {};
+      for (var f = 0; f < dataFields.length; f++){
+        var dataId = dataFields[f];
+         if (student[dataId] !== undefined) {
+          student.currentExtraData[dataId] = student[dataId];
+         }
+      }
+      student.lastSavedChoice = JSON.parse(JSON.stringify(student.currentChoice)); //clone currentChoice as the last saved choice
+      student.lastSavedExtraData = JSON.parse(JSON.stringify(student.currentExtraData)); //clone extraData as last saved extra data
+    }
+    
+    $scope.checkOverseasTrip = function(s) {
+      if (s.currentExtraData.T25HK === 0) {
+        // Hide the overseas trips container
+        angular.forEach(s.currentChoice, function(value, key) {
+          s.currentChoice[key] = false;
+        });
+      }
+    };
+
+    function fetchCountsData() {
+      $scope.dataFetching = true;
+      google.script.run.withSuccessHandler(tripCountsReceived).getTripCounts();
+    }
+    
+    $scope.postChoices = function(data, sindex){
+      $scope.dataFetching = true;
+      google.script.run.withSuccessHandler(saveSuccess).approverPostData(data, sindex);
+    };
+    
+    $scope.studentPostChoices = function(rowindex, studentId, currentChoice, currentExtraData, sindex){
+      //console.log(data);
+      $scope.dataFetching = true;
+      google.script.run.withSuccessHandler(saveSuccess).studentPostData(rowindex, studentId, currentChoice, currentExtraData, sindex);
+    };
+    
+    function saveSuccess(e){
+      $scope.dataFetching = false;
+      //console.log(e);
+      //console.log(e.hasOwnProperty("choice"));
+      $scope.error = e.error;
+      if(e.hasOwnProperty("update")){ //if no error, update data
+        var update = e.update;
+        var s = $scope.students[e.sindex];
+        for (const key in update){
+          s[key] = update[key]
+        }
+        processStudent(s, $scope.tripCounts, $scope.data.dataFields);
+        //$scope.tripChoiceForm.$setPristine();
+      }else{ //if no choice data, let's assume error and refresh data for user.
+        loadData();
+      }
+      //console.log($scope);
+      $scope.$digest();
+    };
+    
+    
+
+    // Array of trip names to track
+    //const tripNames = Object.keys($scope.s.choice).filter(key => $scope.tripCounts.some(trip => trip.name === key));
+    
+    // Function to count checked boxes
+    $scope.updateSelected = function(student) {
+      // Clear the existing Selected list
+      student.selected = [];
+      student.countSelected = 0;
+      // Iterate through currentChoice keys
+      for (const key in student.currentChoice) {
+        if (student.currentChoice[key] === 1 || student.currentChoice[key] === true) {
+          student.selected.push(key); // Add key name if selected is true
+          student.countSelected++;
+        }
+      }
+      //console.log(student.selected);
+      //console.log(student.countSelected);
+      //console.log(student);
+    };
+
+    $scope.noChangesSinceSave = function(a,b) {
+        return angular.equals(a, b);
+    };
+    
+    //clear all overseas trips of if HK selected
+    $scope.checkOverseasTrip = function(s) {
+      if (s.currentExtraData.T25HK === 1) {
+        // Hide the overseas trips container
+        angular.forEach(s.currentChoice, function(value, key) {
+          s.currentChoice[key] = false;
+        });
+      }
+      $scope.updateSelected(s);
+      //console.log(s);
+    };
+
+
+      
+})
+
+.directive('submitButtons', function() {
+  return {
+    scope: {
+      choiceData: '=',
+      studentData: '@'
+      },
+    template: '<button ng-click="postChoice(choiceData)" title="Survey Open:{{studentData.surveyOpen}} from {{studentData.surveyStart}} until {{studentData.surveyEnd}}">Submit choices</button>'
+  };
+});
+
+
+
+
+//-----
+// getExistingRow - returns the row that contains the data matching the criteria, or returns the next row in the spreadsheet.
+//
+//-----
+function getExistingRow(myList,checkCol,checkCriteria){
+  var myRow = 0;
+  while (myRow < myList.length){
+    if (myList[myRow][checkCol] == checkCriteria) {
+      return myRow;
+    }
+    myRow++;
+  } 
+  return myRow;
+}
+
+
+
+//-----
+//   getRowsMatching takes a data list and searches the sortIndex for all values that match valueToFind, returning the rows that match this value
+//-----
+
+function getRowsMatching(myDataList, sortIndex, valueToFind){
+  
+  var foundList = new Array();
+  
+  myDataList.sort(function(a, b){ //Sort the items by studentID
+    var x = a[sortIndex];
+    var y = b[sortIndex];
+    return (x < y ? -1 : (x > y ? 1 : 0));});
+  
+  var cdr = 0;
+  var found = false; 
+  
+  while ( cdr < myDataList.length){
+    if (myDataList[cdr][sortIndex] == valueToFind) {
+      found=true;
+      foundList.push(myDataList[cdr])
+    }
+    else if (found){
+      return foundList;
+    }
+    cdr++;
+  }
+
+  return foundList;
+  
+}
+
+//Returns True if Value is found in col column of myArray 2D array
+function findThisInArray(myArray, value, col){
+  for( var i = 0; i < myArray.length; i++ ) {
+      if(myArray[i][col] == value ) {
+          return true;
+          break;
+      }
+    
+  }
+  return false;
+}
+  </script>
