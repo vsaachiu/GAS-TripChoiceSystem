@@ -95,6 +95,12 @@ function loadGInfo() {
   userType.isStudent = (myStudentInfo.length > 0); //We are a student
   userType.isParent = (myChildInfo.length > 0); //We are a parent
       Logger.log(myStudentInfo);
+  
+  // Check if user has no role at all
+  if (!userType.isApprover && !userType.isAdvisor && !userType.isStudent && !userType.isParent) {
+    error = {status: true, class: "bg-dark text-light", msg: "You do not have access to this trip system. Please contact the administrators if you believe this is an error."};
+  }
+  
   if (userType.isApprover) { //We are an approver
 
     studentInfo = arrayToObjects(choicesList);

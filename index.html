@@ -22,8 +22,10 @@
   
   <div id="bannerArea" ng-show="dataFetching"><div class="alert alert-info" >Loading...</div></div>
   
-  <div id="myTop"  >
-    <div id="errorBanner" class="alert alert-danger" ng-show="error.status">{{error.msg}}</div>
+  <div id="errorBanner" class="alert" ng-class="error.class" ng-show="error.status">{{error.msg}}</div>
+  
+  <div id="myTop" ng-show="!error.status">
+   
    
     <div class="row">
       <table class="table table-striped">
