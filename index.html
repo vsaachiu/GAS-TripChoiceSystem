@@ -44,7 +44,7 @@
               <form name="tripChoiceForm" id="tripChoiceForm">
               <div class="row">
                 <div class="col-md-12 col-xl-6">
-                  <div class="col-12">
+                  <!--<div class="col-12">
                     <h4>1 - Location</h4>
                     <p>Please indicate your type of trip:</p>
                     <div class="col-12">
@@ -66,10 +66,10 @@
                       </label>
                     </div>              
 
-                  </div>
-                  <div class="col-12" id="overseasTrips-container" ng-show="s.currentExtraData.T25HK === 0">
+                  </div>-->
+                  <div class="col-12" id="overseasTrips-container"> 
 
-                    <h4>Overseas Trip Preference</h4>
+                    <h4>1 - Location: Overseas Trip Preference</h4>
                     <label>Indicate which {{ maxSelections }} trips you would prefer:</label>
                     <div class="col-12" ng-repeat="t in tripCounts | orderBy:'order'">  
                       <input type="checkbox" 
@@ -86,7 +86,7 @@
                   <div class="col-12">
                     <h4>2 - Buddy Preference</h4>
                     <label for="buddySelect">Choose a Buddy:</label>
-                    <select id="buddySelect" ng-model="s.currentExtraData.chosenBuddyId" ng-disabled="dataFetching || data.userType.isStudent|| !s.canPost" ng-options="buddy.buddyId as buddy.displayName for buddy in buddyList | filter:{year: s.year, buddyId: '!' + s.id} | orderBy:['displayName']">
+                    <select id="buddySelect" ng-model="s.currentExtraData.chosenBuddyId" ng-disabled="dataFetching || data.userType.isStudent|| !s.canPost" ng-options="buddy.buddyId as buddy.displayName for buddy in buddyList | filter:{buddyId: '!' + s.id, gender: s.gender} | orderBy:['displayName']">
                         <option value="">Select a buddy</option>
                     </select>
 
@@ -128,7 +128,7 @@
                                 title="Survey Open:{{s.student.surveyOpen}} from {{s.student.surveyStart}}" 
                                 ng-if="s.canPost && data.userType.isParent" 
                                 ng-disabled="noChangesSinceSave(s.currentChoice, s.lastSavedChoice) && noChangesSinceSave(s.currentExtraData, s.lastSavedExtraData) || dataFetching || ((s.currentExtraData.T25HK === 0) && (s.countSelected < maxSelections)) || !s.currentExtraData.chosenBuddyId" 
-                                ng-class="{'btn-light': noChangesSinceSave(s.currentChoice, s.lastSavedChoice) && noChangesSinceSave(s.currentExtraData, s.lastSavedExtraData),'btn-success': s.currentExtraData.chosenBuddyId && (((s.countSelected >= maxSelections)&&(s.currentExtraData.T25HK === 0))||(s.currentExtraData.T25HK === 1)) , 'btn-danger': ((s.currentExtraData.T25HK === 0) && (s.countSelected < maxSelections)) || !s.currentExtraData.chosenBuddyId }" 
+                                ng-class="{'btn-light': noChangesSinceSave(s.currentChoice, s.lastSavedChoice) && noChangesSinceSave(s.currentExtraData, s.lastSavedExtraData),'btn-success': s.currentExtraData.chosenBuddyId && (s.countSelected >= maxSelections) , 'btn-danger': ((s.currentExtraData.T25HK === 0) && (s.countSelected < maxSelections)) || !s.currentExtraData.chosenBuddyId }" 
                                 class="btn btn-lg col-10">Save choice</button>
                         </span>
                                  <span class="col-12 small text-info" ng-show="noChangesSinceSave(s.currentChoice, s.lastSavedChoice) && noChangesSinceSave(s.currentExtraData, s.lastSavedExtraData)">Saved!</span>

@@ -79,7 +79,7 @@ function loadGInfo() {
   //var studentList = ListDoc.getSheetByName(myStudentDataSheetName).getDataRange().getValues();
   var choicesList = SurveyDoc.getSheetByName(mySurveySheetName).getDataRange().getValues();
   var buddySheet = ListDoc.getSheetByName(buddyListSheetName);
-  var buddyList = arrayToObjects(buddySheet.getRange(1,1,buddySheet.getLastRow(),4).getValues()); 
+  var buddyList = arrayToObjects(buddySheet.getRange(1,1,buddySheet.getLastRow(),5).getValues()); 
 
 
   var myApprover = getRowsMatching(approverList, approverEmailCol, thisUser);
@@ -118,6 +118,17 @@ function loadGInfo() {
   } else if (userType.isParent) { //we are a parent
     studentInfo = arrayToObjects(choicesList,"parentEmail", thisUser);
     
+  }
+  
+  // Check date locking and update canPost values for each student
+  if (!DisableDateLocking && studentInfo.length > 0) {
+    for (var i = 0; i < studentInfo.length; i++) {
+      var student = studentInfo[i];
+      if (student.postStartDate && student.postEndDate) {
+        var timeOpen = timeCheck(new Date(student.postStartDate), new Date(student.postEndDate));
+        student.canPost = student.canPost && timeOpen; // Only allow posting if both original canPost and time window are valid
+      }
+    }
   }
   
   //Get a list of possible choices for this user
