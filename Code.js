@@ -637,10 +637,158 @@ function sendAllocationEmails() {
   }
 }
 
+/**
+ * Function to populate student data from the master student database
+ * Prompts user for year groups and confirms before writing data
+ */
+function populateStudentData() {
+  const sourceSpreadsheetId = "1B_DenT-IBnDh3rEaI-D2n6yaKVaTlshWd7PCGEOCkAM";
+  const sourceSheetName = "Portal_Order";
+  const ui = SpreadsheetApp.getUi();
+  
+  try {
+    // Prompt for year groups
+    const yearGroupResponse = ui.prompt(
+      'Enter Year Groups',
+      'Please enter year groups separated by commas (e.g., 7,8,9):',
+      ui.ButtonSet.OK_CANCEL
+    );
+    
+    if (yearGroupResponse.getSelectedButton() !== ui.Button.OK) {
+      return; // User cancelled
+    }
+    
+    const yearGroupsText = yearGroupResponse.getResponseText().trim();
+    if (!yearGroupsText) {
+      ui.alert('No year groups entered. Operation cancelled.');
+      return;
+    }
+    
+    // Parse year groups
+    const yearGroups = yearGroupsText.split(',').map(yg => yg.trim()).filter(yg => yg);
+    
+    if (yearGroups.length === 0) {
+      ui.alert('No valid year groups entered. Operation cancelled.');
+      return;
+    }
+    
+    // Get source data
+    const sourceSpreadsheet = SpreadsheetApp.openById(sourceSpreadsheetId);
+    const sourceSheet = sourceSpreadsheet.getSheetByName(sourceSheetName);
+    const sourceData = sourceSheet.getDataRange().getValues();
+    
+    if (sourceData.length <= 1) {
+      ui.alert('No student data found in source sheet.');
+      return;
+    }
+    
+    // Find column indices in source data
+    const sourceHeaders = sourceData[0];
+    const getColIndex = (headerName) => {
+      const index = sourceHeaders.indexOf(headerName);
+      if (index === -1) {
+        throw new Error(`Column '${headerName}' not found in source sheet`);
+      }
+      return index;
+    };
+    
+    const sourceIndices = {
+      reg: getColIndex('Reg'),
+      surname: getColIndex('Surname'),
+      firstName: getColIndex('First Name'),
+      preferredName: getColIndex('Preferred Name'),
+      studentEmail: getColIndex(' Student Email'),
+      familyEmail: getColIndex(' Family Email'),
+      house: getColIndex('House'),
+      gender: getColIndex('Gender'),
+      yearGroup: getColIndex('Year Group')
+    };
+    
+    // Filter students by year group and prepare data
+    const filteredStudents = [];
+    for (let i = 1; i < sourceData.length; i++) {
+      const row = sourceData[i];
+      const studentYearGroup = String(row[sourceIndices.yearGroup]).trim();
+      
+      if (yearGroups.includes(studentYearGroup)) {
+        // Build name from Surname, First Name, Preferred Name
+        const surname = row[sourceIndices.surname] || '';
+        const firstName = row[sourceIndices.firstName] || '';
+        const preferredName = row[sourceIndices.preferredName] || '';
+        const fullName = [preferredName, firstName, surname].filter(name => name).join(' ').trim();
+        //id, 	email, 	name, 	hrm, 	parentEmail, 	house, 	gender, 
+        const studentData = [
+          row[sourceIndices.studentEmail], // col 0: id (student email)
+          row[sourceIndices.studentEmail], // col 1: email (student email)
+          fullName, // col 2: name
+          row[sourceIndices.reg], // col 3: hrm (Reg)
+          row[sourceIndices.familyEmail], // col 4: parentEmail
+          row[sourceIndices.house], // col 5: house
+          row[sourceIndices.gender], // col 6: gender
+          true, // col 7: canPost (canPostCol)
+          new Date(new Date().getTime() + (10 * 24 * 60 * 60 * 1000)), // col 8: startDate (startDateCol) - 10 days from now
+          new Date(new Date().getTime() + (30 * 24 * 60 * 60 * 1000)), // col 9: endDate (endDateCol) - 30 days from now
+          '',
+          row[sourceIndices.yearGroup]
+        ];
+        
+        filteredStudents.push(studentData);
+      }
+    }
+    
+    if (filteredStudents.length === 0) {
+      ui.alert(`No students found for year groups: ${yearGroups.join(', ')}`);
+      return;
+    }
+    
+    // Show confirmation
+    const confirmResponse = ui.alert(
+      'Confirm Student Data Import',
+      `Found ${filteredStudents.length} students for year groups: ${yearGroups.join(', ')}\n\nThis will add datato LiveResults sheet. Continue?`,
+      ui.ButtonSet.YES_NO
+    );
+
+    
+    
+    if (confirmResponse !== ui.Button.YES) {
+      ui.alert('Operation cancelled.');
+      return;
+    }
+    
+    // Write to destination sheet
+    const destSpreadsheet = SpreadsheetApp.openById(myListDocID);
+    const destSheet = destSpreadsheet.getSheetByName(mySurveySheetName); // "LiveResults"
+    destSheet.copyTo(destSpreadsheet); //Make a backup copy of old LiveResults
+    
+    // Prepare headers and data
+    /*
+    // id, 	email, 	name, 	hrm, 	parentEmail, 	house, 	gender, 
+    const headers = ['id', 'email', 'name', 'hrm', 'parentEmail', 'col5', 'col6', 'canPost', 'startDate', 'endDate', 'advisorEmail', 'house', 'gender', 'col13', 'col14', 'col15', 'col16', 'col17', 'col18'];
+    
+    // Clear existing data and write new data
+    destSheet.clear();
+    
+    // Write headers
+    destSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    */
+    // Write student data
+    if (filteredStudents.length > 0) {
+      destSheet.getRange(destSheet.getLastRow()+1, 1, filteredStudents.length, filteredStudents[0].length).setValues(filteredStudents);
+    }
+    
+    ui.alert('Success!', `Successfully imported ${filteredStudents.length} students to the LiveResults sheet.`, ui.ButtonSet.OK);
+    
+  } catch (error) {
+    Logger.log('Error in populateStudentData: ' + error.toString());
+    ui.alert('Error', 'An error occurred while importing student data: ' + error.toString(), ui.ButtonSet.OK);
+  }
+}
+
 
 function onOpen() {
   SpreadsheetApp.getUi()
       .createMenu('VSA Trips')
       .addItem('Send Allocation Emails', 'sendAllocationEmails')
+      .addItem('Populate Student Data', 'populateStudentData')
       .addToUi();
 }
