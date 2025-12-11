@@ -785,10 +785,154 @@ function populateStudentData() {
 }
 
 
+function populateBuddyList() {
+  const sourceSpreadsheetId = "1B_DenT-IBnDh3rEaI-D2n6yaKVaTlshWd7PCGEOCkAM";
+  const sourceSheetName = "Portal_Order";
+  const ui = SpreadsheetApp.getUi();
+  
+  try {
+    // Prompt for year groups
+    const yearGroupResponse = ui.prompt(
+      'Enter Year Groups',
+      'Please enter year groups separated by commas (e.g., 7,8,9):',
+      ui.ButtonSet.OK_CANCEL
+    );
+    
+    if (yearGroupResponse.getSelectedButton() !== ui.Button.OK) {
+      return; // User cancelled
+    }
+    
+    const yearGroupsText = yearGroupResponse.getResponseText().trim();
+    if (!yearGroupsText) {
+      ui.alert('No year groups entered. Operation cancelled.');
+      return;
+    }
+    
+    // Parse year groups
+    const yearGroups = yearGroupsText.split(',').map(yg => yg.trim()).filter(yg => yg);
+    
+    if (yearGroups.length === 0) {
+      ui.alert('No valid year groups entered. Operation cancelled.');
+      return;
+    }
+    
+    // Get source data
+    const sourceSpreadsheet = SpreadsheetApp.openById(sourceSpreadsheetId);
+    const sourceSheet = sourceSpreadsheet.getSheetByName(sourceSheetName);
+    const sourceData = sourceSheet.getDataRange().getValues();
+    
+    if (sourceData.length <= 1) {
+      ui.alert('No student data found in source sheet.');
+      return;
+    }
+    
+    // Find column indices in source data
+    const sourceHeaders = sourceData[0];
+    const getColIndex = (headerName) => {
+      const index = sourceHeaders.indexOf(headerName);
+      if (index === -1) {
+        throw new Error(`Column '${headerName}' not found in source sheet`);
+      }
+      return index;
+    };
+    
+    const sourceIndices = {
+      hrm: getColIndex('Reg'),
+      surname: getColIndex('Surname'),
+      firstName: getColIndex('First Name'),
+      preferredName: getColIndex('Preferred Name'),
+      chineseName: getColIndex('Chinese Name'),
+      studentId: getColIndex('Student ID'),
+      familyEmail: getColIndex(' Family Email'),
+      studentEmail: getColIndex(' Student Email'),
+      house: getColIndex('House'),
+      gender: getColIndex('Gender'),
+      yearGroup: getColIndex('Year Group')
+    };
+    
+    // Filter students by year group and prepare data
+    const filteredStudents = [];
+    for (let i = 1; i < sourceData.length; i++) {
+      const row = sourceData[i];
+      const studentYearGroup = String(row[sourceIndices.yearGroup]).trim();
+      
+      if (yearGroups.includes(studentYearGroup)) {
+        // Build displayName: Surname + (Preferred Name or First Name) + " - " + Homeroom
+        // Formula: =E2&" "&if(G2="",F2,G2)&" - "&D2
+        const surname = row[sourceIndices.surname] || '';
+        const firstName = row[sourceIndices.firstName] || '';
+        const preferredName = row[sourceIndices.preferredName] || '';
+        const hrm = row[sourceIndices.hrm] || '';
+        const nameToUse = preferredName ? preferredName : firstName;
+        const displayName = `${hrm} - ${nameToUse} ${surname}`.trim();
+        
+        // BuddyList fields: buddyId, displayName, year, homeroom, Surname, First Name, 
+        // Preferred Name, Chinese, Class No, Student ID, Candidate No, Personal Code, 
+        // Student Email, Parent Email, House, Gender
+        const buddyData = [
+          row[sourceIndices.studentEmail], // buddyId (Student Email)
+          displayName, // displayName
+          row[sourceIndices.yearGroup], // year (Year Group)
+          row[sourceIndices.hrm], // homeroom
+          row[sourceIndices.surname], // Surname
+          row[sourceIndices.firstName], // First Name
+          row[sourceIndices.preferredName], // Preferred Name
+          row[sourceIndices.chineseName], // Chinese
+          '', // Class No (not in source)
+          row[sourceIndices.studentId], // Student ID
+          '', // Candidate No (not in source)
+          '', // Personal Code (not in source)
+          row[sourceIndices.studentEmail], // Student Email
+          row[sourceIndices.familyEmail], // Parent Email
+          row[sourceIndices.house], // House
+          row[sourceIndices.gender] // Gender
+        ];
+        
+        filteredStudents.push(buddyData);
+      }
+    }
+    
+    if (filteredStudents.length === 0) {
+      ui.alert(`No students found for year groups: ${yearGroups.join(', ')}`);
+      return;
+    }
+    
+    // Show confirmation
+    const confirmResponse = ui.alert(
+      'Confirm Buddy List Import',
+      `Found ${filteredStudents.length} students for year groups: ${yearGroups.join(', ')}\n\nThis will add data to BuddyList sheet. Continue?`,
+      ui.ButtonSet.YES_NO
+    );
+    
+    if (confirmResponse !== ui.Button.YES) {
+      ui.alert('Operation cancelled.');
+      return;
+    }
+    
+    // Write to destination sheet
+    const destSpreadsheet = SpreadsheetApp.openById(myListDocID);
+    const destSheet = destSpreadsheet.getSheetByName(buddyListSheetName); // "BuddyList"
+    destSheet.copyTo(destSpreadsheet); //Make a backup copy of old BuddyList
+    
+    // Write buddy data (append to existing data)
+    if (filteredStudents.length > 0) {
+      destSheet.getRange(destSheet.getLastRow() + 1, 1, filteredStudents.length, filteredStudents[0].length).setValues(filteredStudents);
+    }
+    
+    ui.alert('Success!', `Successfully imported ${filteredStudents.length} students to the BuddyList sheet.`, ui.ButtonSet.OK);
+    
+  } catch (error) {
+    Logger.log('Error in populateBuddyList: ' + error.toString());
+    ui.alert('Error', 'An error occurred while importing buddy list data: ' + error.toString(), ui.ButtonSet.OK);
+  }
+}
+
+
 function onOpen() {
   SpreadsheetApp.getUi()
       .createMenu('VSA Trips')
       .addItem('Send Allocation Emails', 'sendAllocationEmails')
       .addItem('Populate Student Data', 'populateStudentData')
+      .addItem('Populate Buddy List', 'populateBuddyList')
       .addToUi();
 }
